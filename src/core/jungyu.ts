@@ -1,7 +1,20 @@
 ///// Component /////
+interface ComponentPayload {
+  tagName?: string;
+  props?: {
+    [key: string]: unknown;
+  };
+  state?: {
+    [key: string]: unknown;
+  };
+}
+
 /** 컴포넌트 생성기능 */
 export class Component {
-  constructor(payload = {}) {
+  public el;
+  public props;
+  public state;
+  constructor(payload: ComponentPayload = {}) {
     const {
       tagName = 'div', // 최상위 요소의 태그 이름
       state = {},
@@ -19,32 +32,44 @@ export class Component {
 }
 
 ///// Router /////
+interface Route {
+  path: string;
+  component: typeof Component;
+}
+type Routes = Route[]
+
 /** 페이지 렌더링기능 */
-const routeRender = (routes) => {
+const routeRender = (routes: Routes) => {
   // 접속할 때 해시가 없으면 /#/로 redirect 함.
   if (!location.hash) {
-    history.replaceState(null, null, '/#/'); // (상태, 제목, 주소)
+    history.replaceState(null, '', '/#/'); // (상태, 제목, 주소)
   }
   const routerView = document.querySelector('router-view');
-
   const [hash, queryString = ''] = location.hash.split('?'); // 물음표를 기준으로 쿼리스트링 구분
 
   // 1) 쿼리스트링을 객체로 변환해 히스토리의 상태에 저장!
+  interface Query {
+    [key: string]: string;
+  }
   const query = queryString.split('&').reduce((acc, cur) => {
     const [key, value] = cur.split('=');
     acc[key] = value;
     return acc;
-  }, {});
-  history.replaceState(query, null);
+  }, {} as Query);
+  history.replaceState(query, '');
 
-  const currentRoute = routes.find((route) => new RegExp(`^${route.path}/?$`).test(hash));
+  // 2) 현재 라우트 정보를 찾아서 렌더링!
+  const currentRoute = routes
+    .find(route => new RegExp(`^${route.path}/?$`).test(hash));
+  if(routerView){
   routerView.innerHTML = '';
-  routerView.appendChild(new currentRoute.component().el);
+  currentRoute && routerView.appendChild(new currentRoute.component().el);
+  }
 
   window.scrollTo(0, 0);
 };
 
-export function createRouter(routes) {
+export function createRouter(routes: Routes) {
   return function () {
     window.addEventListener('popstate', () => {
       routeRender(routes);
@@ -54,10 +79,17 @@ export function createRouter(routes) {
 }
 
 ///// Store /////
-export class Store {
-  constructor(state) {
-    this.state = {}; // 상태 (데이터)
-    this.observers = {};
+interface StoreObservers {
+  [key: string]: SubscribeCallback[];
+}
+interface SubscribeCallback {
+  (arg: unknown): void;
+}
+export class Store<S> {
+  public state = {} as S; // 상태 (데이터)
+  private observers = {} as StoreObservers;
+  constructor(state: S) {
+    
     for (const key in state) {
       // 각 상태에 대한 변경 감시 (Setter) 설정!
       Object.defineProperty(this.state, key, {
@@ -66,15 +98,18 @@ export class Store {
         // Setter
         set: (val) => {
           state[key] = val;
-          if (Array.isArray(this.observers[key])) {  // 호출할 콜백이 있는 경우
+          if (Array.isArray(this.observers[key])) {
+            // 호출할 콜백이 있는 경우
             this.observers[key].forEach((observer) => observer(val));
           }
         },
       });
     }
   }
-  // 상태변경 구독
-  subscribe(key, cb) {
-    Array.isArray(this.observers[key]) ? this.observers[key].push(cb) : (this.observers[key] = [cb]);
+  // 상태변경 구독!
+  subscribe(key: string, cb: SubscribeCallback) {
+    Array.isArray(this.observers[key]) 
+      ? this.observers[key].push(cb) 
+      : this.observers[key] = [cb];
   }
 }

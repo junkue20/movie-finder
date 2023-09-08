@@ -12,6 +12,7 @@ export default class Movie extends Component {
       <div class="plot skeleton"></div>
     </div>
     `;
+
     await getMovieDetails(history.state.id);
     const { movie } = movieStore.state;
     const bigPoster = movie.Poster.replace('SX300', 'SX700');
@@ -36,7 +37,7 @@ export default class Movie extends Component {
         </div>
         <div>
           <h3>Ratings</h3>
-          ${movie.Ratings.map((rating) => {
+          ${movie.Ratings.map(rating => {
             return `<p>${rating.Source} - ${rating.Value}</p>`;
           }).join('')}
         </div>
