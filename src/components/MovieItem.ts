@@ -1,7 +1,15 @@
-import { Component } from '../core/jungyu/'
+import { Component } from '../core/jungyu'
+import { SimpleMovie } from '../store/movie' // type
+
+
+interface Props {
+  [key: string]: unknown;
+  movie: SimpleMovie
+}
 
 export default class MovieItem extends Component {
-  constructor(props) {
+  public props!: Props
+  constructor(props: Props) {
     super({
       props,
       tagName: 'a',
